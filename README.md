@@ -1,3 +1,5 @@
+**English** | [Українська](README.uk.md)
+
 # Ad Watch
 
 A daily watchdog for Meta Ads and Google Ads that sends problems to Telegram and changes
@@ -160,7 +162,7 @@ PYTHONPATH=src uvicorn adwatch.web:app --port 7860
 Stack: Python, FastAPI, httpx (async, `ASGITransport` for the in-process mock), Pydantic,
 hand-drawn SVG, Telegram Bot API, Groq (`openai/gpt-oss-120b`). One Python function on Vercel.
 
-Verified end to end on the deployed service (11.10.2026): Vercel cron call → 5 Telegram messages →
+Verified end to end on the deployed service (11.10.2026): a manual daily-report call → 5 Telegram messages →
 taps on **Pause** and **Add negatives** → the ad paused and the negatives added in the mock
 accounts, both messages edited with the result, no webhook errors.
 

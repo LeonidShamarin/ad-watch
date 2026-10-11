@@ -71,6 +71,21 @@ def og() -> FileResponse:
     return FileResponse(STATIC / "og.png")
 
 
+@app.get("/favicon.svg")
+def favicon_svg() -> FileResponse:
+    return FileResponse(STATIC / "favicon.svg", media_type="image/svg+xml")
+
+
+@app.get("/favicon.ico")
+def favicon_ico() -> FileResponse:
+    return FileResponse(STATIC / "favicon.ico", media_type="image/x-icon")
+
+
+@app.get("/apple-touch-icon.png")
+def touch_icon() -> FileResponse:
+    return FileResponse(STATIC / "apple-touch-icon.png", media_type="image/png")
+
+
 @app.get("/api/runs")
 def runs() -> list[dict]:
     return snapshots.index()

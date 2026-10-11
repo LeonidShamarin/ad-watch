@@ -8,6 +8,8 @@ and collects negative keywords.
 
 **Live demo:** https://ad-watch-six.vercel.app (UI in Ukrainian)
 
+![Dashboard: Meta problems, CTR of the fatigued ad, Shopping bid steps, negative keywords](docs/dashboard-light.png)
+
 The ad accounts are synthetic: there is no real account with real spend behind this demo.
 The data is served by mock servers that speak the **real wire formats** (Meta Graph API
 insights, Google Ads API v22 `searchStream` with GAQL), so the same client code runs against
@@ -135,3 +137,11 @@ PYTHONPATH=src uvicorn adwatch.web:app --port 7860
 
 Stack: Python, FastAPI, httpx (async, `ASGITransport` for the in-process mock), Pydantic,
 hand-drawn SVG, Telegram Bot API, Groq (`openai/gpt-oss-120b`). One Python function on Vercel.
+
+Verified end to end on the deployed service (11.10.2026): Vercel cron call → 5 Telegram messages →
+taps on **Pause** and **Add negatives** → the ad paused and the negatives added in the mock
+accounts, both messages edited with the result, no webhook errors.
+
+| Dark mode |
+|---|
+| ![Dark](docs/dashboard-dark.png) |

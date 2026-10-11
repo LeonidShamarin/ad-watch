@@ -27,7 +27,6 @@ mock_app, meta_state, gads_state = mockapi.build_app()
 app.mount("/mock", mock_app)
 
 _lock = threading.Lock()
-_state_cache: dict[date, dict] = {}
 
 
 def _env(name: str) -> str:
@@ -95,20 +94,26 @@ def og() -> FileResponse:
     return FileResponse(STATIC / "og.png")
 
 
+_terms_cache: dict[date, list] = {}
+
+
 @app.get("/api/state")
 async def state(date: str | None = None) -> dict:
+    """Дані дашборду. Вердикти моделі по пошукових запитах рахуються раз на день на інстанс
+    і кешуються, щоб відвідувачі сторінки не витрачали ключ; пауза й мінус-слова з Telegram
+    видно одразу, бо стан моку читається при кожному запиті."""
     as_of = _as_of(date)
     with _lock:
-        hit = _state_cache.get(as_of)
-    if hit and not meta_state.paused and not gads_state.negatives:
-        return hit
-    res = await _run(as_of)
-    out = _state_json(res)
-    with _lock:
-        if len(_state_cache) > 40:
-            _state_cache.clear()
-        _state_cache[as_of] = out
-    return out
+        cached_terms = _terms_cache.get(as_of)
+    res = await _run(as_of, llm=None if cached_terms else _llm())
+    if cached_terms:
+        res.terms = cached_terms
+    elif any(t.source == "llm" for t in res.terms):
+        with _lock:
+            if len(_terms_cache) > 40:
+                _terms_cache.clear()
+            _terms_cache[as_of] = res.terms
+    return _state_json(res)
 
 
 @app.get("/api/feed.csv")

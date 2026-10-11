@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ad Watch</title>
+<meta name="description" content="Демо: щоденний нагляд за рекламою Meta Ads і Google Ads, сповіщення в Telegram, дії лише після підтвердження людиною.">
+<meta property="og:title" content="Ad Watch: нагляд за рекламою Meta і Google Ads">
+<meta property="og:description" content="Втома креативу, дорожчання покупки, баланс, кроки ставок Shopping, мінус-слова. Сповіщення в Telegram з кнопками підтвердження.">
+<meta property="og:image" content="https://ad-watch.vercel.app/og.png">
+<meta property="og:type" content="website">
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
+  --grid: #e1e0d9; --axis: #c3c2b7; --border: rgba(11,11,11,0.10);
+  --s1: #2a78d6; --s2: #eb6834; --s1-soft: rgba(42,120,214,0.12);
+  --up: #006300; --down: #b42318; --good: #0ca30c; --warning: #fab219; --serious: #ec835a; --critical: #d03b3b;
+  --accent: #2a78d6;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
+    --s1: #3987e5; --s2: #d95926; --s1-soft: rgba(57,135,229,0.16); --up: #0ca30c; --down: #ff7a6e; --accent: #3987e5;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
+  --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
+  --s1: #3987e5; --s2: #d95926; --s1-soft: rgba(57,135,229,0.16); --up: #0ca30c; --down: #ff7a6e; --accent: #3987e5;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 20px 16px 48px; }
+header { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; justify-content: space-between; }
+h1 { font-size: 24px; margin: 0; letter-spacing: -0.01em; }
+h2 { font-size: 15px; margin: 0 0 4px; }
+.sub { color: var(--ink-2); margin: 2px 0 0; }
+.note { margin: 14px 0 18px; padding: 10px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--ink-2); font-size: 13.5px; }
+.grid { display: grid; gap: 14px; }
+.kpis { grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; min-width: 0; }
+.kpi .label { color: var(--ink-2); font-size: 13px; }
+.kpi .value { font-size: clamp(19px, 1.9vw, 24px); white-space: nowrap; font-weight: 650; margin: 2px 0; }
+.kpi .delta { font-size: 13px; color: var(--ink-2); }
+.up { color: var(--up); } .down { color: var(--down); }
+.two { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); margin-top: 14px; }
+@media (max-width: 860px) { .two { grid-template-columns: 1fr; } }
+.cap { color: var(--muted); font-size: 12.5px; margin: 0 0 10px; }
+.alerts { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.alert { padding: 9px 11px; border-radius: 9px; border: 1px solid var(--border); border-left-width: 4px; }
+.alert .t { font-weight: 600; font-size: 14px; }
+.alert .d { color: var(--ink-2); font-size: 13px; }
+.sev-high { border-left-color: var(--critical); } .sev-medium { border-left-color: var(--serious); } .sev-low { border-left-color: var(--warning); }
+.pill { display: inline-block; font-size: 11.5px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--ink-2); margin-top: 4px; }
+svg text { fill: var(--muted); font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12.5px; color: var(--ink-2); margin-bottom: 6px; }
+.legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 5px; }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+th { text-align: left; color: var(--muted); font-weight: 500; font-size: 12px; padding: 6px 8px 6px 0; border-bottom: 1px solid var(--grid); }
+td { padding: 7px 8px 7px 0; border-bottom: 1px solid var(--grid); vertical-align: top; }
+td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.scroll { overflow-x: auto; }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 9px; overflow: hidden; background: var(--surface); }
+.seg button { border: 0; background: none; color: var(--ink-2); padding: 6px 12px; font: inherit; font-size: 13px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--page); }
+.row { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+.arrow { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.neg { color: var(--down); font-weight: 600; } .pos { color: var(--ink-2); }
+ol.flow { margin: 6px 0 0; padding-left: 20px; color: var(--ink-2); font-size: 13.5px; }
+ol.flow li { margin: 3px 0; }
+code { font-size: 12px; background: var(--page); border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px; word-break: break-all; }
+footer { margin-top: 28px; color: var(--muted); font-size: 13px; }
+a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Ad Watch</h1>
+      <p class="sub">Щоденний нагляд за рекламою Meta Ads і Google Ads зі сповіщеннями в Telegram</p>
+    </div>
+  </header>
+
+  <p class="note">Демо на <b>синтетичних кабінетах</b>: справжнього рекламного кабінету з витратами тут немає. Дані приходять через
+    мок-сервери у форматі справжніх API (Meta Graph API і Google Ads API v22), тож той самий код працює зі справжніми кабінетами
+    після заміни адреси й ключів. У дані навмисно закладені проблеми, і правила мають їх знайти. Останній повний день: <b id="asof">…</b>.</p>
+
+  <section class="grid kpis" id="kpis" aria-label="Тиждень"></section>
+
+  <div class="grid two">
+    <section class="card">
+      <h2>Meta Ads: що зламалось</h2>
+      <p class="cap">Знайдено правилами в коді: відсоток зміни плюс статистичний тест, щоб звичайний шум не піднімав тривогу.</p>
+      <ul class="alerts" id="alerts"></ul>
+    </section>
+    <section class="card">
+      <h2>Втома креативу: CTR по днях</h2>
+      <p class="cap" id="ctrcap">Частка кліків від показів. Пунктир: середній CTR оголошення в базовому періоді.</p>
+      <div id="ctr"></div>
+    </section>
+  </div>
+
+  <div class="grid two">
+    <section class="card">
+      <div class="row">
+        <h2>Google Shopping: кроки ставок</h2>
+        <div class="seg" role="group" aria-label="Фільтр">
+          <button data-f="changed" aria-pressed="true">Зміни</button><button data-f="all">Усі</button>
+        </div>
+      </div>
+      <p class="cap">Мітка <code>custom_label_0</code>: 10 низька ставка … 35 максимальна, 5 карантин, 99 виключено. Ціль ACOS 15%.
+        Результат: <a href="/api/feed.csv">додатковий фід для Merchant Center</a>.</p>
+      <div class="scroll"><table id="products"></table></div>
+    </section>
+    <section class="card">
+      <h2>Google Search: мінус-слова</h2>
+      <p class="cap">Словник явних ознак плюс запити без продажів. Додаються лише після кнопки в Telegram.</p>
+      <div class="scroll"><table id="terms"></table></div>
+    </section>
+  </div>
+
+  <div class="grid two">
+    <section class="card">
+      <h2>Як це працює</h2>
+      <ol class="flow">
+        <li>Щодня о 9:00 за Києвом (Vercel Cron) сервіс забирає 60 днів insights з Meta і 30 днів зі Shopping і пошукових запитів Google.</li>
+        <li>Правила шукають втому креативу, дорожчання покупки, оголошення без показів, кінець бюджету, міняють кроки ставок товарів і збирають мінус-слова.</li>
+        <li>У Telegram приходить огляд і окремі повідомлення з кнопками «Призупинити» та «Додати мінус-слова». Без натискання нічого не змінюється.</li>
+        <li>Щопонеділка тижневий звіт: текст пише модель, але кожне число звіряється з даними, інакше відправляється шаблон.</li>
+      </ol>
+    </section>
+    <section class="card">
+      <h2>Мок API відкритий</h2>
+      <p class="cap">Можна перевірити формат відповідей самому:</p>
+      <p><code id="c1"></code></p>
+      <p><code>POST /mock/gads/v22/customers/1234567890/googleAds:searchStream</code> з GAQL у тілі,
+        заголовками <code>developer-token</code>, <code>login-customer-id: 9876543210</code> і <code>Authorization: Bearer …</code>.</p>
+      <p class="cap" id="timing"></p>
+    </section>
+  </div>
+
+  <footer>Код і заміри: <a href="https://github.com/LeonidShamarin/ad-watch">github.com/LeonidShamarin/ad-watch</a>. Автор: Леонід Шамарін.</footer>
+</div>
+<script>
+const $ = (id) => document.getElementById(id);
+const usd = (v) => "$" + Number(v).toLocaleString("uk-UA", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+let STATE = null, filter = "changed";
+
+function delta(now, prev, goodUp = true, suffix = "") {
+  if (!prev) return "";
+  const d = (now - prev) / prev * 100;
+  const cls = (d >= 0) === goodUp ? "up" : "down";
+  return `<span class="${cls}">${d >= 0 ? "+" : ""}${d.toFixed(1)}%</span> до попереднього тижня${suffix}`;
+}
+
+function kpis(f) {
+  const m = f.meta.this_week, mp = f.meta.prev_week, g = f.google_shopping.this_week, gp = f.google_shopping.prev_week;
+  const tiles = [
+    ["Meta: витрати, 7 днів", usd(m.spend), delta(m.spend, mp.spend, false)],
+    ["Meta: покупки", m.purchases, delta(m.purchases, mp.purchases)],
+    ["Meta: ROAS", m.roas.toFixed(2), delta(m.roas, mp.roas)],
+    ["Meta: ціна покупки", usd(m.cpa), delta(m.cpa, mp.cpa, false)],
+    ["Google Shopping: витрати", usd(g.cost), delta(g.cost, gp.cost, false)],
+    ["Google Shopping: ACOS", g.acos_pct.toFixed(1) + "%", delta(g.acos_pct, gp.acos_pct, false)],
+  ];
+  $("kpis").innerHTML = tiles.map(([l, v, d]) =>
+    `<div class="card kpi"><div class="label">${l}</div><div class="value">${v}</div><div class="delta">${d}</div></div>`).join("");
+}
+
+function alerts(list, paused) {
+  $("alerts").innerHTML = list.map((a) => {
+    const act = a.action ? `<span class="pill">${paused.includes(a.entity_id) ? "Призупинено з Telegram" : "Кнопка в Telegram: призупинити"}</span>` : "";
+    return `<li class="alert sev-${a.severity}"><div class="t">${esc(a.title)}</div><div class="d">${esc(a.details)}</div>${act}</li>`;
+  }).join("") || "<li class='cap'>Проблем не знайдено.</li>";
+}
+
+function ctrChart(series, alertsList) {
+  const id = Object.keys(series)[0];
+  if (!id) { $("ctr").innerHTML = "<p class='cap'>Втоми креативу немає.</p>"; return; }
+  const a = alertsList.find((x) => x.entity_id === id);
+  $("ctrcap").textContent = `«${a.entity_name}»: частка кліків від показів. Пунктир: CTR у базовому періоді (${a.metrics.ctr_base}%).`;
+  const pts = series[id].filter((r) => r[1] > 0).map((r) => [r[0], r[2] / r[1] * 100]);
+  const W = 520, H = 210, L = 36, B = 22, T = 8, R = 8;
+  const max = Math.max(...pts.map((p) => p[1]), a.metrics.ctr_base) * 1.15;
+  const x = (i) => L + i * (W - L - R) / (pts.length - 1), y = (v) => T + (H - T - B) * (1 - v / max);
+  const ticks = [0, max / 2, max].map((v) => `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)"/>
+    <text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v.toFixed(1)}%</text>`).join("");
+  const path = pts.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p[1]).toFixed(1)}`).join("");
+  const labels = [0, Math.floor(pts.length / 2), pts.length - 1].map((i) =>
+    `<text x="${x(i)}" y="${H - 6}" text-anchor="middle">${pts[i][0].slice(5).split("-").reverse().join(".")}</text>`).join("");
+  $("ctr").innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="CTR по днях">${ticks}
+    <line x1="${L}" x2="${W - R}" y1="${y(a.metrics.ctr_base)}" y2="${y(a.metrics.ctr_base)}" stroke="var(--muted)" stroke-dasharray="4 4"/>
+    <path d="${path}" fill="none" stroke="var(--s1)" stroke-width="2"/>${labels}</svg>`;
+}
+
+function products(list) {
+  const rows = list.filter((p) => filter === "all" || p.changed);
+  $("products").innerHTML = `<tr><th>Товар</th><th class="n">Крок</th><th class="n">Витрати 14 дн.</th><th class="n">Продажі 14 дн.</th><th>Чому</th></tr>` +
+    rows.map((p) => `<tr><td>${esc(p.title)}<br><span class="cap">${p.item_id}</span></td>
+      <td class="n arrow">${p.label_from}${p.changed ? ` → <b>${p.label_to}</b>` : ""}</td>
+      <td class="n">${usd(p.metrics.cost_14 || 0)}</td><td class="n">${(p.metrics.conv_14 || 0).toFixed(0)}</td>
+      <td>${esc(p.reason)}</td></tr>`).join("");
+}
+
+function terms(list, added) {
+  const rows = [...list].sort((a, b) => b.negative - a.negative || b.cost - a.cost);
+  $("terms").innerHTML = `<tr><th>Запит</th><th class="n">Кліки</th><th class="n">Витрати</th><th class="n">Продажі</th><th>Рішення</th></tr>` +
+    rows.map((t) => `<tr><td>${esc(t.term)}</td><td class="n">${t.clicks}</td><td class="n">${usd(t.cost)}</td><td class="n">${t.conversions}</td>
+      <td class="${t.negative ? "neg" : "pos"}">${t.negative ? (added.includes(t.term) ? "додано ✓" : "мінус-слово") : "лишити"}<br><span class="cap">${esc(t.reason)}</span></td></tr>`).join("");
+}
+
+function render() {
+  const s = STATE;
+  $("asof").textContent = s.as_of.split("-").reverse().join(".");
+  kpis(s.facts); alerts(s.meta_alerts, s.paused); ctrChart(s.series, s.meta_alerts);
+  products(s.products); terms(s.terms, s.negatives_added);
+  $("timing").textContent = `Останній прогін: Meta API ${s.timings_ms.meta_api} мс, Google API ${s.timings_ms.google_api} мс, разом ${s.timings_ms.total} мс.`;
+}
+
+document.querySelectorAll(".seg button").forEach((b) => b.addEventListener("click", () => {
+  filter = b.dataset.f;
+  document.querySelectorAll(".seg button").forEach((x) => x.setAttribute("aria-pressed", x === b));
+  products(STATE.products);
+}));
+$("c1").textContent = "GET /mock/meta/v23.0/act_1000001/insights?level=ad&time_increment=1&fields=ad_name,impressions,clicks,spend,actions&access_token=demo";
+fetch("/api/state").then((r) => r.json()).then((s) => { STATE = s; render(); })
+  .catch(() => { $("alerts").innerHTML = "<li class='cap'>Не вдалося завантажити дані.</li>"; });
+</script>
+</body>
+</html>

@@ -1,0 +1,128 @@
+{
+  "meta": {
+    "accounts": 300,
+    "clean_accounts": 20,
+    "final": {
+      "by_kind": {
+        "creative_fatigue": {
+          "tp": 136,
+          "fn": 21,
+          "fp": 0,
+          "recall": 0.866,
+          "precision": 1.0
+        },
+        "cost_spike": {
+          "tp": 133,
+          "fn": 28,
+          "fp": 4,
+          "recall": 0.826,
+          "precision": 0.971
+        },
+        "zero_delivery": {
+          "tp": 147,
+          "fn": 0,
+          "fp": 0,
+          "recall": 1.0,
+          "precision": 1.0
+        },
+        "low_balance": {
+          "tp": 156,
+          "fn": 0,
+          "fp": 0,
+          "recall": 1.0,
+          "precision": 1.0
+        }
+      },
+      "false_alerts_on_clean_accounts": 0
+    },
+    "pct_only": {
+      "by_kind": {
+        "creative_fatigue": {
+          "tp": 138,
+          "fn": 19,
+          "fp": 1,
+          "recall": 0.879,
+          "precision": 0.993
+        },
+        "cost_spike": {
+          "tp": 137,
+          "fn": 24,
+          "fp": 9,
+          "recall": 0.851,
+          "precision": 0.938
+        },
+        "zero_delivery": {
+          "tp": 147,
+          "fn": 0,
+          "fp": 0,
+          "recall": 1.0,
+          "precision": 1.0
+        },
+        "low_balance": {
+          "tp": 156,
+          "fn": 0,
+          "fp": 0,
+          "recall": 1.0,
+          "precision": 1.0
+        }
+      },
+      "false_alerts_on_clean_accounts": 0
+    }
+  },
+  "google": {
+    "shops": 100,
+    "products": 4000,
+    "naive_7d": {
+      "accuracy": 0.756,
+      "steady_wrongly_changed": 0.51,
+      "label_changes_per_shop": 29.2,
+      "by_archetype": {
+        "burner": 1.0,
+        "click_sink": 1.0,
+        "dead": 1.0,
+        "expensive": 0.718,
+        "invisible": 1.0,
+        "low_ctr": 0.995,
+        "recovering": 0.8,
+        "steady": 0.49,
+        "winner": 0.818
+      }
+    },
+    "window_14d": {
+      "accuracy": 0.828,
+      "steady_wrongly_changed": 0.352,
+      "label_changes_per_shop": 27.2,
+      "by_archetype": {
+        "burner": 1.0,
+        "click_sink": 1.0,
+        "dead": 1.0,
+        "expensive": 0.723,
+        "invisible": 1.0,
+        "low_ctr": 1.0,
+        "recovering": 0.8,
+        "steady": 0.648,
+        "winner": 0.923
+      }
+    },
+    "final_14d_tolerance": {
+      "accuracy": 0.864,
+      "steady_wrongly_changed": 0.184,
+      "label_changes_per_shop": 23.9,
+      "by_archetype": {
+        "burner": 1.0,
+        "click_sink": 1.0,
+        "dead": 1.0,
+        "expensive": 0.598,
+        "invisible": 1.0,
+        "low_ctr": 1.0,
+        "recovering": 0.8,
+        "steady": 0.816,
+        "winner": 0.853
+      }
+    }
+  },
+  "_generated": {
+    "as_of": "2026-10-10",
+    "seconds": 14.7
+  }
+}

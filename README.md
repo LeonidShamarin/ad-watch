@@ -23,7 +23,7 @@ Problems are planted in the data on purpose, and the rules are measured on findi
 | Meta: zero delivery | status `ACTIVE`, 0 impressions for 2 days, ~500+/day before | usually a rejected ad or a payment problem; the UI still says "active" |
 | Meta: spend runway | `spend_cap - amount_spent` (cents, as the API returns them) divided by the 7-day average spend | everything stops when the cap is hit, often at night |
 | Google Shopping bid steps | each product carries `custom_label_0` (5 quarantine, 10..35 bid steps, 99 excluded); rules over 14 days move it; output is a supplemental feed CSV for Merchant Center | labels live in Merchant Center, not in the Ads API; product groups split by the label hold the bids |
-| Google Search negatives | a dictionary of clear signals (jobs, free, used, repair, manual, brands not sold), then terms that spend without sales; the unclear ones can go to a model | the dictionary is wrong on "free shipping"; see the measured table |
+| Google Search negatives | the model judges every search term against the catalogue; code then drops any term that already sold; the dictionary rules are the fallback when the model is unavailable | measured below: 83-87% vs 66% for the dictionary |
 | Telegram | a daily overview plus one message per actionable problem with **Pause** / **Add negatives** buttons; callback data is HMAC-signed, the webhook checks Telegram's secret header and the chat id | money and account changes go through a person |
 | Weekly report | numbers computed in code; the model only writes 3-5 sentences, and every number in its text is matched against the data, otherwise the template is sent | the model must not invent or recompute figures |
 
@@ -64,11 +64,26 @@ The price of the final version: expensive products are caught less often (59.8% 
 because with 2-3 sales in two weeks one sale more or less flips the verdict. Moving a bid
 back and forth every week costs more than reacting a week later.
 
-**Negative keywords, 47 labelled search terms** (labels are mine, 15 of them are traps such as
-"garden hose free shipping", "hose repair kit", "gardena compatible connector"): see the table
-in the section below once the model run is in `results.json`.
+**Negative keywords, 47 labelled search terms** (labels are mine; 12 are traps such as
+"garden hose free shipping", "hose repair kit", "gardena compatible connector", "garden hose
+rental"). Model: `openai/gpt-oss-120b` on Groq, temperature 0, five runs:
 
-Pipeline on the mock: Meta API ~70 ms, Google API ~80 ms, whole daily run ~160 ms.
+| Approach | Right | Negatives found | Traps right | Cost per run |
+|---|---|---|---|---|
+| Dictionary + "spends without sales" rules | 66.0% | 78.3% | 2 / 12 | $0 |
+| Rules, model only for unclear terms | 72-75% | 78.3% | 3 / 12 | $0.0004 |
+| Model on every term | 79-85% | 100% | 8 / 12 | $0.0009 |
+| **Model on every term + "a term that sold is never negative" (used)** | **83-87%** | **100%** | 8 / 12 | $0.0009 |
+
+The dictionary cannot see negatives without a trigger word ("aquarium hose", "garden hose
+song", "rental"), so giving the model only the dictionary's doubtful cases could not fix the
+misses. The model's own mistakes go the other way: it proposes products the shop sells
+("hose repair kit", "gardena compatible connector", "raised bed kit wood"). The sales rule in
+code removes the ones that already sold; the rest is why a person approves the list in
+Telegram. The same prompt gives 79-85% across runs at temperature 0, so one run is not a result.
+I did not tune the prompt on these 47 terms: they are the test set.
+
+Pipeline on the mock: Meta API ~70 ms, Google API ~80 ms, whole daily run ~160 ms without the\nmodel, ~2-3 s with it. Model cost: about $0.001 per daily run, about $1 per 1 000 runs.
 Tests: 34, no network, no API keys, run under a 1 GB memory cap in Docker
 (`scripts/run_tests_capped.ps1`) and in GitHub Actions.
 

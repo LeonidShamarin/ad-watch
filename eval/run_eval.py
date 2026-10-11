@@ -155,6 +155,12 @@ def eval_terms() -> dict:
         judged, usage = judge_terms(chat, todo)
         pred = dict(rules) if name != "llm_only" else {}
         pred.update({t: j.negative for t, j in judged.items()})
+        if name == "llm_only":
+            # той самий прогін моделі + правило коду «запит із продажами не мінусуємо» (так у pipeline)
+            conv = {d["term"]: d["conversions"] for d in data}
+            guarded = {t: v and conv[t] == 0 for t, v in pred.items()}
+            out["llm_all_plus_sales_guard"] = {**_score(guarded, truth, traps), "llm_terms": len(todo),
+                                               "errors": sorted(t for t in truth if guarded[t] != truth[t])}
         out[name] = {**_score(pred, truth, traps), "llm_terms": len(todo), "seconds": round(time.perf_counter() - t0, 1),
                      "cost_usd": round(cost_usd(usage), 5),
                      "errors": sorted(t for t in truth if pred.get(t) != truth[t])}

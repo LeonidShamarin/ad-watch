@@ -17,7 +17,8 @@ class FakeChat:
 
     def complete(self, messages, json_mode):
         self.seen.append(messages)
-        return self.answers.pop(0), {"prompt_tokens": 1000, "completion_tokens": 100}
+        a = self.answers.pop(0)
+        return (a(messages) if callable(a) else a), {"prompt_tokens": 1000, "completion_tokens": 100}
 
 
 def test_term_judge_repairs_invalid_json_once():
@@ -39,12 +40,20 @@ def test_check_numbers_catches_invented_figure():
     assert llm.check_numbers("ROAS впав на 30%.", facts)["unverified"] == ["30"]
 
 
-def test_pipeline_uses_llm_for_unclear_terms_and_rejects_bad_summary():
-    judge = json.dumps({"items": [{"term": "hose timer app", "negative": False, "reason": "є таймери"}]})
-    chat = FakeChat([judge, "Витрати зросли на 999%."])
+def _judge_all(messages):
+    """Фейкова модель: вважає мінус-словом усе, де є 'app' або 'free'."""
+    terms = json.loads(messages[-1]["content"])["terms"]
+    return json.dumps({"items": [{"term": t, "negative": "app" in t or "free" in t, "reason": "тест"} for t in terms]})
+
+
+def test_pipeline_llm_judges_all_terms_sales_guard_and_rejects_bad_summary():
+    chat = FakeChat([_judge_all, "Витрати зросли на 999%."])
     res = asyncio.run(pipeline.run(AS_OF, llm=chat, with_summary=True))
-    v = next(t for t in res.terms if t.term == "hose timer app")
-    assert v.source == "llm" and not v.negative
+    v = {t.term: t for t in res.terms}
+    assert all(t.source == "llm" for t in res.terms)
+    assert v["hose timer app"].negative
+    assert not v["garden hose free shipping"].negative          # модель сказала «мінус», але є продажі
+    assert not v["garden hose jobs"].negative                    # модель має останнє слово над словником
     assert res.summary_source == "llm_rejected" and "999" in res.unverified
     assert res.summary.startswith("Meta:")                      # пішов шаблон
 

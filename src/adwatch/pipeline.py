@@ -149,14 +149,18 @@ async def run(as_of: date | None = None, *, clients: Clients | None = None, llm:
     plan, unclear = rules_gads.judge_terms(term_rows)
     search_cid = str(next((r.get("campaign.id") for r in term_rows if r.get("campaign.id")), ""))
     llm_cost = 0.0
-    if llm and llm_terms and unclear:
+    if llm and llm_terms and plan.verdicts:
+        # Замір (eval/results.json, terms): модель на всіх запитах 85% проти 66% у словника,
+        # бо словник не бачить «rental», «aquarium», «song». Поверх моделі правило в коді:
+        # запит, що вже продавав, мінус-словом не стає.
         try:
-            judged, usage = judge_terms(llm, [u.term for u in unclear])
+            judged, usage = judge_terms(llm, [v.term for v in plan.verdicts])
             llm_cost += cost_usd(usage)
             for v in plan.verdicts:
-                if v.term in judged:
-                    j = judged[v.term]
-                    v.negative, v.source, v.reason = j.negative, "llm", j.reason
+                j = judged[v.term]
+                v.negative, v.source, v.reason = j.negative and v.conversions == 0, "llm", j.reason
+                if j.negative and v.conversions > 0:
+                    v.reason += " (але є продажі, тому лишаємо)"
         except Exception as e:                      # модель не валить прогін: лишаються правила
             for v in unclear:
                 v.reason += f" (модель недоступна: {type(e).__name__})"

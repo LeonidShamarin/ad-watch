@@ -133,7 +133,10 @@ async def _send_all(msgs: list[telegram.Message]) -> list[bool]:
 
 
 def _public_url(request: Request) -> str:
-    return _env("PUBLIC_URL") or str(request.base_url).rstrip("/")
+    # На Vercel адреса запиту в cron це технічний домен деплою за логіном Vercel,
+    # тому беремо основний домен проєкту, який Vercel дає в оточенні.
+    prod = _env("VERCEL_PROJECT_PRODUCTION_URL")
+    return _env("PUBLIC_URL") or (f"https://{prod}" if prod else str(request.base_url).rstrip("/"))
 
 
 @app.get("/api/cron/daily")

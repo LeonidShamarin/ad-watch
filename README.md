@@ -6,7 +6,7 @@ sudden jump in cost per purchase, ads that are "active" but get no impressions, 
 account about to hit its spend cap; on Google it moves Shopping products between bid steps
 and collects negative keywords.
 
-**Live demo:** https://ad-watch.vercel.app (UI in Ukrainian)
+**Live demo:** https://ad-watch-six.vercel.app (UI in Ukrainian)
 
 The ad accounts are synthetic: there is no real account with real spend behind this demo.
 The data is served by mock servers that speak the **real wire formats** (Meta Graph API

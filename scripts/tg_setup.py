@@ -3,6 +3,7 @@
     python scripts/tg_setup.py chat              # знайти chat_id з останнього /start і записати в .env
     python scripts/tg_setup.py webhook <url>     # під'єднати бота до <url>/telegram/webhook з секретом
     python scripts/tg_setup.py test              # надіслати щоденний звіт демо в чат (кнопки запрацюють після webhook)
+    python scripts/tg_setup.py cron [daily|weekly] # запустити розклад на Vercel з CRON_SECRET
 """
 
 from __future__ import annotations
@@ -78,6 +79,13 @@ def main() -> None:
                 bot = telegram.Bot(env("TELEGRAM_BOT_TOKEN"), http)
                 return [(await bot.send(env("TELEGRAM_CHAT_ID"), m)).get("ok") for m in msgs]
         print("надіслано:", asyncio.run(go()))
+    elif cmd == "cron":
+        # Запустити розклад на задеплоєному сервісі вручну: перевіряє, що змінні у Vercel підхопились.
+        which = sys.argv[2] if len(sys.argv) > 2 else "daily"
+        base = env("PUBLIC_URL") or "https://ad-watch-six.vercel.app"
+        r = httpx.get(f"{base}/api/cron/{which}", headers={"Authorization": f"Bearer {env('CRON_SECRET')}"},
+                      timeout=120)
+        print(r.status_code, r.text[:400])
     else:
         print(__doc__)
 

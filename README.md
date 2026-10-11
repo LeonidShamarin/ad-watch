@@ -8,7 +8,14 @@ and collects negative keywords.
 
 **Live demo:** https://ad-watch-six.vercel.app (UI in Ukrainian)
 
-![Dashboard: Meta problems, CTR of the fatigued ad, Shopping bid steps, negative keywords](docs/dashboard-light.png)
+![Dashboard: switching between daily runs 1-10 October, problems appear over time; Shopping bid steps and negative keywords](docs/dashboard-demo.gif)
+
+Telegram, recorded on the deployed service: the overview, the creative-fatigue alert, **Pause**
+tapped, the message is edited with the result; then the negative keywords, **Add all** tapped,
+13 added. The taps were sent as the same `callback_query` Telegram posts to the webhook (the
+orange dot marks each one); the personal chat list on the left is blurred.
+
+![Telegram: alert, Pause, result; negative keywords, Add all, result](docs/telegram-demo.gif)
 
 The ad accounts are synthetic: there is no real account with real spend behind this demo.
 The data is served by mock servers that speak the **real wire formats** (Meta Graph API

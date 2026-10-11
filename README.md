@@ -83,7 +83,8 @@ code removes the ones that already sold; the rest is why a person approves the l
 Telegram. The same prompt gives 79-85% across runs at temperature 0, so one run is not a result.
 I did not tune the prompt on these 47 terms: they are the test set.
 
-Pipeline on the mock: Meta API ~70 ms, Google API ~80 ms, whole daily run ~160 ms without the\nmodel, ~2-3 s with it. Model cost: about $0.001 per daily run, about $1 per 1 000 runs.
+Pipeline on the mock: Meta API ~70 ms, Google API ~80 ms, whole daily run ~160 ms without the
+model, ~2-3 s with it. Model cost: about $0.001 per daily run, about $1 per 1 000 runs.
 Tests: 34, no network, no API keys, run under a 1 GB memory cap in Docker
 (`scripts/run_tests_capped.ps1`) and in GitHub Actions.
 

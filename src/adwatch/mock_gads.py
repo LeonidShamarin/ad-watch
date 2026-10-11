@@ -202,10 +202,11 @@ def _nest(flat: dict, fields: list[str]) -> dict:
     return out
 
 
-def run_query(w: GadsWorld, query: str, negatives: dict[str, set[str]]) -> list[dict]:
-    q = parse(query, w.as_of)
-    since = q["since"] or (w.as_of - timedelta(days=29))
-    until = q["until"] or w.as_of
+def run_query(w: GadsWorld, query: str, negatives: dict[str, set[str]], clock: date | None = None) -> list[dict]:
+    clock = clock or w.as_of
+    q = parse(query, clock)
+    since = q["since"] or (clock - timedelta(days=29))
+    until = min(q["until"] or clock, clock)
     by_date = "segments.date" in q["fields"]
     rows = _flat_rows(w, q["resource"], since, until, by_date, negatives)
     known = set().union(*(r.keys() for r in rows)) if rows else set()
@@ -225,8 +226,9 @@ def run_query(w: GadsWorld, query: str, negatives: dict[str, set[str]]) -> list[
 # --- HTTP ----------------------------------------------------------------------------
 
 class GadsMockState:
-    def __init__(self, world_for: callable) -> None:
+    def __init__(self, world_for: callable, clock_for: callable | None = None) -> None:
         self.world_for = world_for
+        self.clock_for = clock_for
         self.negatives: dict[str, set[str]] = defaultdict(set)
         self.lock = threading.Lock()
         self.calls: defaultdict[str, int] = defaultdict(int)
@@ -259,7 +261,8 @@ def make_router(state: GadsMockState) -> APIRouter:
             state.calls["searchStream"] += 1
             negatives = {k: set(v) for k, v in state.negatives.items()}
         try:
-            results = run_query(state.world_for(), body.get("query", ""), negatives)
+            results = run_query(state.world_for(), body.get("query", ""), negatives,
+                                state.clock_for() if state.clock_for else None)
         except GaqlError as ex:
             return _error(400, str(ex), {"queryError": "BAD_FIELD_NAME" if "field" in str(ex) else "UNEXPECTED"})
         fmask = ",".join(_camel(f) for f in parse(body["query"], state.world_for().as_of)["fields"])

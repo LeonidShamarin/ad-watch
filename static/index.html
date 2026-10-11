@@ -68,6 +68,13 @@ td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; white-space:
 .seg button { border: 0; background: none; color: var(--ink-2); padding: 6px 12px; font: inherit; font-size: 13px; cursor: pointer; }
 .seg button[aria-pressed="true"] { background: var(--ink); color: var(--page); }
 .row { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+.runs { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 14px; }
+.run { border: 1px solid var(--border); background: var(--surface); color: var(--ink-2); border-radius: 9px; padding: 5px 10px; font: inherit; font-size: 13px; cursor: pointer; }
+.run[aria-pressed="true"] { background: var(--ink); color: var(--page); }
+.run .dot { display: inline-block; min-width: 18px; margin-left: 4px; padding: 0 5px; border-radius: 999px; font-size: 11.5px; background: var(--grid); color: var(--ink); }
+.run .dot.hot { background: var(--critical); color: #fff; }
+.summary { margin: 0 0 14px; }
+.summary p { margin: 4px 0 0; }
 .arrow { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .neg { color: var(--down); font-weight: 600; } .pos { color: var(--ink-2); }
 ol.flow { margin: 6px 0 0; padding-left: 20px; color: var(--ink-2); font-size: 13.5px; }
@@ -88,7 +95,16 @@ a { color: var(--accent); }
 
   <p class="note">Демо на <b>синтетичних кабінетах</b>: справжнього рекламного кабінету з витратами тут немає. Дані приходять через
     мок-сервери у форматі справжніх API (Meta Graph API і Google Ads API v22), тож той самий код працює зі справжніми кабінетами
-    після заміни адреси й ключів. У дані навмисно закладені проблеми, і правила мають їх знайти. Останній повний день: <b id="asof">…</b>.</p>
+    після заміни адреси й ключів. У дані навмисно закладені проблеми, і правила мають їх знайти. Нижче 10 щоденних прогонів
+    1-10 жовтня: видно, як проблеми з'являються з часом. Прогони зроблено заздалегідь, тож перегляд сторінки не витрачає запитів до моделі.</p>
+
+  <nav class="runs" id="runs" aria-label="Прогони"></nav>
+
+  <section class="card summary">
+    <h2>Тижневий звіт за <span id="asof">…</span></h2>
+    <p id="summary"></p>
+    <p class="cap" id="sumsrc"></p>
+  </section>
 
   <section class="grid kpis" id="kpis" aria-label="Тиждень"></section>
 
@@ -128,10 +144,10 @@ a { color: var(--accent); }
     <section class="card">
       <h2>Як це працює</h2>
       <ol class="flow">
-        <li>Щодня о 9:00 за Києвом (Vercel Cron) сервіс забирає 60 днів insights з Meta і 30 днів зі Shopping і пошукових запитів Google.</li>
+        <li>Прогін (вручну, або за розкладом, якщо його увімкнути) забирає 60 днів insights з Meta і 30 днів зі Shopping і пошукових запитів Google.</li>
         <li>Правила шукають втому креативу, дорожчання покупки, оголошення без показів, кінець бюджету, міняють кроки ставок товарів і збирають мінус-слова.</li>
         <li>У Telegram приходить огляд і окремі повідомлення з кнопками «Призупинити» та «Додати мінус-слова». Без натискання нічого не змінюється.</li>
-        <li>Щопонеділка тижневий звіт: текст пише модель, але кожне число звіряється з даними, інакше відправляється шаблон.</li>
+        <li>Тижневий звіт: текст пише модель, але кожне число звіряється з даними, інакше відправляється шаблон. Пошукові запити теж оцінює модель, а код не дає мінусувати запит, що вже продавав.</li>
       </ol>
     </section>
     <section class="card">
@@ -215,12 +231,18 @@ function terms(list, added) {
       <td class="${t.negative ? "neg" : "pos"}">${t.negative ? (added.includes(t.term) ? "додано ✓" : "мінус-слово") : "лишити"}<br><span class="cap">${esc(t.reason)}</span></td></tr>`).join("");
 }
 
+const ua = (d) => d.split("-").reverse().join(".");
 function render() {
   const s = STATE;
-  $("asof").textContent = s.as_of.split("-").reverse().join(".");
+  $("asof").textContent = ua(s.as_of);
+  $("summary").textContent = s.summary;
+  $("sumsrc").textContent = s.summary_source === "llm"
+    ? "Текст написала модель; усі числа в ньому знайдено в даних прогону."
+    : "Шаблон: текст моделі не пройшов перевірку чисел або модель була недоступна.";
+  document.querySelectorAll(".run").forEach((b) => b.setAttribute("aria-pressed", b.dataset.d === s.as_of));
   kpis(s.facts); alerts(s.meta_alerts, s.paused); ctrChart(s.series, s.meta_alerts);
   products(s.products); terms(s.terms, s.negatives_added);
-  $("timing").textContent = `Останній прогін: Meta API ${s.timings_ms.meta_api} мс, Google API ${s.timings_ms.google_api} мс, разом ${s.timings_ms.total} мс.`;
+  $("timing").textContent = `Цей прогін: Meta API ${s.timings_ms.meta_api} мс, Google API ${s.timings_ms.google_api} мс, разом з моделлю ${(s.timings_ms.total / 1000).toFixed(1)} с, модель $${s.llm_cost_usd.toFixed(4)}.`;
 }
 
 document.querySelectorAll(".seg button").forEach((b) => b.addEventListener("click", () => {
@@ -229,8 +251,15 @@ document.querySelectorAll(".seg button").forEach((b) => b.addEventListener("clic
   products(STATE.products);
 }));
 $("c1").textContent = "GET /mock/meta/v23.0/act_1000001/insights?level=ad&time_increment=1&fields=ad_name,impressions,clicks,spend,actions&access_token=demo";
-fetch("/api/state").then((r) => r.json()).then((s) => { STATE = s; render(); })
-  .catch(() => { $("alerts").innerHTML = "<li class='cap'>Не вдалося завантажити дані.</li>"; });
+function load(d) {
+  fetch("/api/state" + (d ? "?date=" + d : "")).then((r) => r.json()).then((s) => { STATE = s; render(); })
+    .catch(() => { $("alerts").innerHTML = "<li class='cap'>Не вдалося завантажити дані.</li>"; });
+}
+fetch("/api/runs").then((r) => r.json()).then((runs) => {
+  $("runs").innerHTML = runs.map((r) => `<button class="run" data-d="${r.as_of}" aria-label="Прогін ${ua(r.as_of)}, проблем у Meta: ${r.meta_alerts}">${ua(r.as_of).slice(0, 5)}<span class="dot ${r.meta_alerts ? "hot" : ""}">${r.meta_alerts}</span></button>`).join("");
+  document.querySelectorAll(".run").forEach((b) => b.addEventListener("click", () => load(b.dataset.d)));
+  load(runs.length ? runs[runs.length - 1].as_of : "");
+});
 </script>
 </body>
 </html>

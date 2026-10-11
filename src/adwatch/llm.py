@@ -117,7 +117,10 @@ def judge_terms(chat: Chat, terms: list[str]) -> tuple[dict[str, TermJudgement],
 
 REPORT_SYSTEM = """Ти аналітик реклами. Напиши 3-5 коротких речень українською для власника магазину:
 що змінилось за тиждень у Meta Ads і Google Ads і на що звернути увагу. Використовуй ЛИШЕ числа з
-наданого JSON, не рахуй нових (жодних власних відсотків чи сум). Валюта долари, знак $ перед числом.
+наданого JSON, не рахуй нових (жодних власних відсотків чи сум). Зміни бери з полів change_vs_prev_week_pct
+і acos_change_percentage_points. Напрям пиши словом, а число без знака: «впали на 29.0%», не «впали на -29.0%».
+Виручку з реклами (value, revenue) називай «виручка». Валюта долари, знак $ перед числом. ACOS це частка витрат на рекламу від
+виручки, не «вартість продажу».
 Без вступу, без списків, без порад, яких немає в даних."""
 
 
@@ -129,7 +132,7 @@ def write_summary(chat: Chat, facts: dict) -> tuple[str, dict]:
 
 
 _NUM = re.compile(r"(?<![\w.])-?\d[\d\s  ]*(?:[.,]\d+)?")
-_TYPO = str.maketrans({"‐": "-", "‑": "-", "‒": "-", "–": "-",
+_TYPO = str.maketrans({"‐": "-", "‑": "-", "‒": "-", "–": "-", "−": "-", "—": "-",
                        " ": " ", " ": " ", " ": " "})
 
 
@@ -164,6 +167,8 @@ def check_numbers(text: str, facts: dict) -> dict:
         checked += 1
         frac = re.search(r"[.,](\d+)$", tok)
         tol = 0.5 * 10 ** -len(frac.group(1)) if frac else 0.5
-        if not any(abs(v - k) <= max(tol + 1e-9, abs(k) * 0.005 if abs(k) >= 1000 else 0) for k in known):
+        # Порівнюємо модулі: «впали на 22.7%» у даних лежить як -22.7. Напрям («зросли/впали»)
+        # ця перевірка не контролює, це обмеження, описане в README.
+        if not any(abs(abs(v) - abs(k)) <= max(tol + 1e-9, abs(k) * 0.005 if abs(k) >= 1000 else 0) for k in known):
             bad.append(tok)
     return {"checked": checked, "unverified": bad}

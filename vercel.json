@@ -5,9 +5,5 @@
       "includeFiles": "{src/**,static/**}",
       "excludeFiles": "{tests/**,eval/**,docs/**,scripts/**,n8n/**,.github/**,.test-logs/**,.certs/**}"
     }
-  },
-  "crons": [
-    { "path": "/api/cron/daily", "schedule": "0 6 * * *" },
-    { "path": "/api/cron/weekly", "schedule": "0 7 * * 1" }
-  ]
+  }
 }

@@ -1,15 +1,15 @@
-"""HTTP: дашборд, публічний мок обох API, щоденний прогін за розкладом і вебхук Telegram.
+"""HTTP: дашборд на збережених прогонах, публічний мок обох API, ручний запуск і вебхук Telegram.
 
-Розклад: Vercel Cron викликає /api/cron/daily щодня і /api/cron/weekly щопонеділка
-з заголовком `Authorization: Bearer $CRON_SECRET`. Без секрету ці ендпоінти мовчать,
-тож сторонній відвідувач не може засипати чат повідомленнями.
+Автоматичного розкладу немає (рішення власника демо: модель не має витрачати токени щодня).
+Дашборд читає прогони з static/runs, зроблені заздалегідь `scripts/make_runs.py`, тож перегляд
+сторінки моделі не викликає. Звіт у Telegram надсилається лише вручну: GET /api/cron/daily
+з `Authorization: Bearer $CRON_SECRET` (або `scripts/tg_setup.py cron`).
 """
 
 from __future__ import annotations
 
 import hmac
 import os
-import threading
 from datetime import date
 from pathlib import Path
 
@@ -17,16 +17,17 @@ import httpx
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 
-from adwatch import mockapi, pipeline, rules_gads, telegram, world
+from adwatch import mockapi, pipeline, snapshots, telegram, world
 from adwatch.llm import GroqChat
+from adwatch.rules_gads import supplemental_feed
+from adwatch.models import ProductDecision
 
 STATIC = Path(__file__).resolve().parents[2] / "static"
+END = snapshots.latest() or world.default_as_of()     # останній збережений прогін = «сьогодні» демо
 
 app = FastAPI(title="Ad Watch", docs_url=None, redoc_url=None)
-mock_app, meta_state, gads_state = mockapi.build_app()
+mock_app, meta_state, gads_state = mockapi.build_app(lambda: END)
 app.mount("/mock", mock_app)
-
-_lock = threading.Lock()
 
 
 def _env(name: str) -> str:
@@ -43,45 +44,21 @@ def _llm():
     return GroqChat(key) if key else None
 
 
-def _as_of(d: str | None) -> date:
-    if not d:
-        return world.default_as_of()
-    try:
-        x = date.fromisoformat(d)
-    except ValueError:
-        raise HTTPException(400, "date must be YYYY-MM-DD") from None
-    if abs((x - world.default_as_of()).days) > 30:
-        raise HTTPException(400, "date must be within 30 days of yesterday")
-    return x
-
-
 async def _run(as_of: date, **kw) -> pipeline.RunResult:
     return await pipeline.run(as_of, clients=pipeline.make_clients(as_of, mock_app), **kw)
 
 
-def _state_json(res: pipeline.RunResult) -> dict:
-    ctr: dict[str, list] = {}
-    for r in res.meta_daily:
-        ctr.setdefault(r.ad_id, []).append([r.day.isoformat(), r.impressions, r.clicks, r.spend, r.purchases])
-    fatigued = [a.entity_id for a in res.meta_alerts if a.kind == "creative_fatigue"]
-    return {
-        "as_of": res.as_of.isoformat(),
-        "facts": res.facts,
-        "summary": res.summary,
-        "meta_alerts": [a.model_dump() for a in res.meta_alerts],
-        "paused": sorted(meta_state.paused),
-        "products": [p.model_dump() | {"changed": p.changed} for p in res.products],
-        "terms": [t.model_dump() for t in res.terms],
-        "negatives_added": sorted(gads_state.negatives.get(res.search_campaign_id, set())),
-        "series": {k: ctr.get(k, []) for k in fatigued},
-        "timings_ms": res.timings_ms,
-        "api_calls": {"meta": dict(meta_state.calls), "google": dict(gads_state.calls)},
-    }
+def _snapshot(d: str | None) -> dict:
+    as_of = d or END.isoformat()
+    snap = snapshots.load(as_of)
+    if snap is None:
+        raise HTTPException(404, f"no saved run for {as_of}; available: {', '.join(snapshots.dates())}")
+    return snap
 
 
 @app.get("/health")
 def health() -> dict:
-    return {"ok": True, "mode": os.environ.get("ADS_MODE", "mock")}
+    return {"ok": True, "mode": os.environ.get("ADS_MODE", "mock"), "runs": len(snapshots.dates())}
 
 
 @app.get("/")
@@ -94,33 +71,23 @@ def og() -> FileResponse:
     return FileResponse(STATIC / "og.png")
 
 
-_terms_cache: dict[date, list] = {}
+@app.get("/api/runs")
+def runs() -> list[dict]:
+    return snapshots.index()
 
 
 @app.get("/api/state")
-async def state(date: str | None = None) -> dict:
-    """Дані дашборду. Вердикти моделі по пошукових запитах рахуються раз на день на інстанс
-    і кешуються, щоб відвідувачі сторінки не витрачали ключ; пауза й мінус-слова з Telegram
-    видно одразу, бо стан моку читається при кожному запиті."""
-    as_of = _as_of(date)
-    with _lock:
-        cached_terms = _terms_cache.get(as_of)
-    res = await _run(as_of, llm=None if cached_terms else _llm())
-    if cached_terms:
-        res.terms = cached_terms
-    elif any(t.source == "llm" for t in res.terms):
-        with _lock:
-            if len(_terms_cache) > 40:
-                _terms_cache.clear()
-            _terms_cache[as_of] = res.terms
-    return _state_json(res)
+def state(date: str | None = None) -> dict:
+    """Збережений прогін + те, що змінилось з Telegram (пауза, мінус-слова) у моці цього інстансу."""
+    snap = _snapshot(date)
+    return snap | {"paused": sorted(meta_state.paused),
+                   "negatives_added": sorted(gads_state.negatives.get(snap["search_campaign_id"], set()))}
 
 
 @app.get("/api/feed.csv")
-async def feed(date: str | None = None) -> PlainTextResponse:
-    res = await _run(_as_of(date))
-    return PlainTextResponse(rules_gads.supplemental_feed(res.products), media_type="text/csv")
-
+def feed(date: str | None = None) -> PlainTextResponse:
+    products = [ProductDecision.model_validate(p) for p in _snapshot(date)["products"]]
+    return PlainTextResponse(supplemental_feed(products), media_type="text/csv")
 
 def _cron_ok(request: Request) -> bool:
     want = _env("CRON_SECRET")
@@ -148,7 +115,7 @@ def _public_url(request: Request) -> str:
 async def cron_daily(request: Request) -> JSONResponse:
     if not _cron_ok(request):
         raise HTTPException(401, "cron secret required")
-    res = await _run(world.default_as_of(), llm=_llm())
+    res = await _run(END, llm=_llm())
     sent = await _send_all(telegram.daily_messages(res, _secret(), _public_url(request)))
     return JSONResponse({"as_of": res.as_of.isoformat(), "messages": len(sent), "ok": all(sent),
                          "llm_cost_usd": res.llm_cost_usd})
@@ -158,7 +125,7 @@ async def cron_daily(request: Request) -> JSONResponse:
 async def cron_weekly(request: Request) -> JSONResponse:
     if not _cron_ok(request):
         raise HTTPException(401, "cron secret required")
-    res = await _run(world.default_as_of(), llm=_llm(), with_summary=True, llm_terms=False)
+    res = await _run(END, llm=_llm(), with_summary=True, llm_terms=False)
     sent = await _send_all([telegram.weekly_message(res)])
     return JSONResponse({"summary_source": res.summary_source, "unverified": res.unverified, "ok": all(sent),
                          "llm_cost_usd": res.llm_cost_usd})

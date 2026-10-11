@@ -35,9 +35,13 @@ def gads_world(as_of: date) -> world.GadsWorld:
     return _cached(("gads", as_of), lambda: world.build_gads(as_of))
 
 
-def build_app(as_of_fn=world.default_as_of) -> tuple[FastAPI, mock_meta.MetaMockState, mock_gads.GadsMockState]:
-    meta_state = mock_meta.MetaMockState(lambda: meta_world(as_of_fn()))
-    gads_state = mock_gads.GadsMockState(lambda: gads_world(as_of_fn()))
+def build_app(as_of_fn=world.default_as_of, world_end_fn=None
+              ) -> tuple[FastAPI, mock_meta.MetaMockState, mock_gads.GadsMockState]:
+    """`as_of_fn` — «годинник» моку: API не бачить днів після нього. `world_end_fn` — кінець історії
+    кабінету; якщо він пізніший за годинник, прогони на різні дні бачать, як проблеми наростають."""
+    end = world_end_fn or as_of_fn
+    meta_state = mock_meta.MetaMockState(lambda: meta_world(end()), clock_for=as_of_fn)
+    gads_state = mock_gads.GadsMockState(lambda: gads_world(end()), clock_for=as_of_fn)
     app = FastAPI(docs_url=None, redoc_url=None)
     app.include_router(mock_meta.make_router(meta_state), prefix="/meta")
     app.include_router(mock_gads.make_router(gads_state), prefix="/gads")

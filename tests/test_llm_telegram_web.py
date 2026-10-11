@@ -38,6 +38,8 @@ def test_check_numbers_catches_invented_figure():
     facts = {"meta": {"spend": 4661.58, "roas": 2.54}}
     assert llm.check_numbers("Витрати $4661.58, ROAS 2.54.", facts)["unverified"] == []
     assert llm.check_numbers("ROAS впав на 30%.", facts)["unverified"] == ["30"]
+    # типографський мінус U+2212 і модуль: «−22.7 %» збігається з -22.7 у даних
+    assert llm.check_numbers("Покупки −22.7 %", {"pct": -22.7})["unverified"] == []
 
 
 def _judge_all(messages):

@@ -60,6 +60,7 @@ class RunResult:
     summary: str = ""
     summary_source: str = "template"        # llm | template | llm_rejected
     unverified: list[str] = field(default_factory=list)
+    llm_text: str = ''                      # текст моделі, навіть якщо його відхилено (для розбору)
     llm_cost_usd: float = 0.0
     timings_ms: dict = field(default_factory=dict)
     meta_daily: list[DayRow] = field(default_factory=list)
@@ -107,10 +108,21 @@ def weekly_facts(meta_rows: list[DayRow], gads_rows: list[dict], as_of: date) ->
     return {
         "period": f"{(as_of - timedelta(days=6)).isoformat()}..{as_of.isoformat()}",
         "meta": {"this_week": m_now, "prev_week": m_prev,
-                 "change_pct": {k: pct(m_now[k], m_prev[k]) for k in ("spend", "purchases", "revenue", "roas")}},
+                 "change_pct": {k: pct(m_now[k], m_prev[k]) for k in m_now}},
         "google_shopping": {"this_week": g_now, "prev_week": g_prev,
-                            "change_pct": {k: pct(g_now[k], g_prev[k]) for k in ("cost", "conversions", "value")}},
+                            "change_pct": {k: pct(g_now[k], g_prev[k]) for k in g_now if k != "acos_pct"},
+                            "acos_change_pp": round(g_now["acos_pct"] - g_prev["acos_pct"], 1)},
     }
+
+
+def facts_for_model(f: dict) -> dict:
+    """Що бачить модель: цей тиждень і готові зміни, без абсолютних цифр минулого тижня.
+    З ними модель рахує відсотки сама й помиляється (заміри в README), без них їй нема з чого."""
+    return {"period": f["period"],
+            "meta": {"this_week": f["meta"]["this_week"], "change_vs_prev_week_pct": f["meta"]["change_pct"]},
+            "google_shopping": {"this_week": f["google_shopping"]["this_week"],
+                                "change_vs_prev_week_pct": f["google_shopping"]["change_pct"],
+                                "acos_change_percentage_points": f["google_shopping"]["acos_change_pp"]}}
 
 
 def template_summary(f: dict, alerts: list[Alert], changes: int, negatives: int) -> str:
@@ -169,9 +181,11 @@ async def run(as_of: date | None = None, *, clients: Clients | None = None, llm:
     res.summary = template_summary(facts, alerts, len(res.label_changes), len(res.negatives))
     if with_summary and llm:
         try:
-            text, usage = write_summary(llm, facts)
+            shown = facts_for_model(facts)
+            text, usage = write_summary(llm, shown)
             llm_cost += cost_usd(usage)
-            chk = check_numbers(text, facts)
+            res.llm_text = text
+            chk = check_numbers(text, shown)
             if chk["unverified"]:
                 res.summary_source, res.unverified = "llm_rejected", chk["unverified"]
             else:

@@ -52,8 +52,9 @@ def _num(v: float) -> str:
 class MetaMockState:
     """Стан моку: світ кабінету і зміни, які клієнт уже зробив (призупинені оголошення)."""
 
-    def __init__(self, world_for: callable) -> None:
+    def __init__(self, world_for: callable, clock_for: callable | None = None) -> None:
         self.world_for = world_for            # () -> MetaWorld
+        self.clock_for = clock_for            # () -> date: днів після нього API ще «не знає»
         self.paused: set[str] = set()
         self.calls: defaultdict[str, int] = defaultdict(int)
         self.lock = threading.Lock()
@@ -130,7 +131,8 @@ def make_router(state: MetaMockState) -> APIRouter:
         with state.lock:
             state.calls["insights"] += 1
 
-        rows = [x for x in w.rows if since <= x.day <= until]
+        clock = state.clock_for() if state.clock_for else w.as_of
+        rows = [x for x in w.rows if since <= x.day <= min(until, clock)]
         items: list[dict] = []
         if daily:
             for x in rows:
@@ -165,9 +167,11 @@ def make_router(state: MetaMockState) -> APIRouter:
         if (e := _auth(request)):
             return e
         w = state.world_for()
+        clock = state.clock_for() if state.clock_for else w.as_of
+        later = round(sum(r.spend for r in w.rows if r.day > clock) * 100)   # ще не витрачено на «сьогодні»
         full = {"id": f"act_{account}", "account_id": account, "name": "Demo Garden Store",
                 "currency": "USD", "account_status": 1, "timezone_name": "Europe/Kyiv",
-                "spend_cap": str(w.spend_cap_cents), "amount_spent": str(w.amount_spent_cents)}
+                "spend_cap": str(w.spend_cap_cents), "amount_spent": str(w.amount_spent_cents - later)}
         fields = {f.strip() for f in request.query_params.get("fields", "id,name").split(",")}
         return {k: v for k, v in full.items() if k in fields or k == "id"}
 

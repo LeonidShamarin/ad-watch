@@ -29,8 +29,14 @@ Problems are planted in the data on purpose, and the rules are measured on findi
 | Telegram | a daily overview plus one message per actionable problem with **Pause** / **Add negatives** buttons; callback data is HMAC-signed, the webhook checks Telegram's secret header and the chat id | money and account changes go through a person |
 | Weekly report | numbers computed in code; the model only writes 3-5 sentences, and every number in its text is matched against the data, otherwise the template is sent | the model must not invent or recompute figures |
 
-Schedule: Vercel Cron calls `/api/cron/daily` at 06:00 UTC and `/api/cron/weekly` on
-Mondays, with `Authorization: Bearer $CRON_SECRET`.
+**No automatic schedule on the demo**, on purpose: a daily cron would spend model tokens every
+day for nobody. The dashboard shows 10 daily runs (1-10 October) made once by
+`scripts/make_runs.py` against one account history, each run seeing only the days up to its own
+date, so problems appear over time: nothing on 1-2 October, creative fatigue from the 3rd, the
+cost spike from the 7th, zero delivery and the spend cap on the 9th-10th. All 10 runs together
+cost $0.007 in model calls; viewing the page calls no model. A report to Telegram is sent on
+demand: `GET /api/cron/daily` with `Authorization: Bearer $CRON_SECRET`. For a real account,
+add `"crons"` to `vercel.json` (e.g. `0 6 * * *`).
 
 ## Measured
 
@@ -108,6 +114,15 @@ Tests: 34, no network, no API keys, run under a 1 GB memory cap in Docker
 - **The negative-keyword dictionary over-fires.** "free" also matches "free shipping";
   "repair" also matches "hose repair kit", which is a product. Terms with sales are never
   proposed, and everything goes through a button, but a dictionary alone is not enough.
+- **My number checker rejected correct reports.** In the first batch of 10 weekly reports, 5
+  were rejected. Reading them showed two different causes. One was mine: the model writes the
+  typographic minus `−` (U+2212), the checker did not know it, so `−22.7%` was read as +22.7
+  and did not match −22.7 in the data. The other was real: given both weeks' absolute numbers,
+  the model computed its own percentages and got some wrong, and once called ACOS "cost of
+  sale". Fixes: the checker normalises minus signs and compares absolute values; the model now
+  gets this week's numbers and ready-made changes only, without last week's absolutes, so it
+  has nothing to recompute. Result: 10 of 10 accepted, and I checked two of them by hand,
+  direction words included. The checker still does not verify direction ("rose" vs "fell").
 - **What the mock does not cover:** Meta's learning phase, attribution windows and delayed
   conversions (yesterday's numbers still change for days), Google's search terms are 30-day
   totals here, and real token lifecycles (Meta System User token, Google OAuth refresh).

@@ -1,0 +1,116 @@
+[
+ {
+  "as_of": "2026-10-01",
+  "meta_alerts": 0,
+  "kinds": [],
+  "label_changes": 20,
+  "negatives": 13,
+  "summary_source": "llm",
+  "llm_cost_usd": 0.000653
+ },
+ {
+  "as_of": "2026-10-02",
+  "meta_alerts": 0,
+  "kinds": [],
+  "label_changes": 19,
+  "negatives": 13,
+  "summary_source": "llm",
+  "llm_cost_usd": 0.000664
+ },
+ {
+  "as_of": "2026-10-03",
+  "meta_alerts": 1,
+  "kinds": [
+   "creative_fatigue"
+  ],
+  "label_changes": 22,
+  "negatives": 13,
+  "summary_source": "llm",
+  "llm_cost_usd": 0.000744
+ },
+ {
+  "as_of": "2026-10-04",
+  "meta_alerts": 1,
+  "kinds": [
+   "creative_fatigue"
+  ],
+  "label_changes": 22,
+  "negatives": 13,
+  "summary_source": "llm",
+  "llm_cost_usd": 0.000698
+ },
+ {
+  "as_of": "2026-10-05",
+  "meta_alerts": 1,
+  "kinds": [
+   "creative_fatigue"
+  ],
+  "label_changes": 24,
+  "negatives": 13,
+  "summary_source": "llm",
+  "llm_cost_usd": 0.000672
+ },
+ {
+  "as_of": "2026-10-06",
+  "meta_alerts": 1,
+  "kinds": [
+   "creative_fatigue"
+  ],
+  "label_changes": 22,
+  "negatives": 13,
+  "summary_source": "llm",
+  "llm_cost_usd": 0.00077
+ },
+ {
+  "as_of": "2026-10-07",
+  "meta_alerts": 2,
+  "kinds": [
+   "cost_spike",
+   "creative_fatigue"
+  ],
+  "label_changes": 22,
+  "negatives": 13,
+  "summary_source": "llm",
+  "llm_cost_usd": 0.00074
+ },
+ {
+  "as_of": "2026-10-08",
+  "meta_alerts": 2,
+  "kinds": [
+   "cost_spike",
+   "creative_fatigue"
+  ],
+  "label_changes": 24,
+  "negatives": 13,
+  "summary_source": "llm",
+  "llm_cost_usd": 0.000687
+ },
+ {
+  "as_of": "2026-10-09",
+  "meta_alerts": 4,
+  "kinds": [
+   "zero_delivery",
+   "cost_spike",
+   "creative_fatigue",
+   "low_balance"
+  ],
+  "label_changes": 24,
+  "negatives": 13,
+  "summary_source": "llm",
+  "llm_cost_usd": 0.000731
+ },
+ {
+  "as_of": "2026-10-10",
+  "meta_alerts": 4,
+  "kinds": [
+   "low_balance",
+   "zero_delivery",
+   "cost_spike",
+   "creative_fatigue"
+  ],
+  "label_changes": 24,
+  "negatives": 13,
+  "summary_source": "llm",
+  "llm_cost_usd": 0.000682
+ }
+]

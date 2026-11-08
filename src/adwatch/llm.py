@@ -72,7 +72,7 @@ def cost_usd(usage: dict) -> float:
 # endpoint. A fallback provider ignores the Groq model id and uses its own default.
 PROVIDER_ENDPOINTS: dict[str, tuple[str, str]] = {
     "groq": ("https://api.groq.com/openai/v1", MODEL),
-    "gemini": ("https://generativelanguage.googleapis.com/v1beta/openai", "gemini-2.5-flash"),
+    "gemini": ("https://generativelanguage.googleapis.com/v1beta/openai", "gemini-3.5-flash-lite"),
     "openai": ("https://api.openai.com/v1", "gpt-4o-mini"),
     "xai": ("https://api.x.ai/v1", "grok-2-latest"),
 }

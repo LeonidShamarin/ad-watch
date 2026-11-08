@@ -18,7 +18,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 
 from adwatch import mockapi, pipeline, snapshots, telegram, world
-from adwatch.llm import GroqChat
+from adwatch.llm import build_chat
 from adwatch.rules_gads import supplemental_feed
 from adwatch.models import ProductDecision
 
@@ -40,8 +40,7 @@ def _secret() -> str:
 
 
 def _llm():
-    key = _env("GROQ_API_KEY")
-    return GroqChat(key) if key else None
+    return build_chat("groq")
 
 
 async def _run(as_of: date, **kw) -> pipeline.RunResult:

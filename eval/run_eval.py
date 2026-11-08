@@ -10,7 +10,6 @@ terms  — розмічені пошукові запити: правила, п�
 from __future__ import annotations
 
 import json
-import os
 import random
 import sys
 import time
@@ -133,7 +132,7 @@ def eval_google(n: int = 100) -> dict:
 
 
 def eval_terms() -> dict:
-    from adwatch.llm import GroqChat, cost_usd, judge_terms
+    from adwatch.llm import build_chat, cost_usd, judge_terms
     data = json.loads((ROOT / "eval" / "terms_labeled.json").read_text(encoding="utf-8"))["items"]
     rows = [{"searchTermView.searchTerm": d["term"], "metrics.clicks": str(d["clicks"]),
              "metrics.conversions": d["conversions"], "metrics.costMicros": str(int(d["clicks"] * 0.6e6))} for d in data]
@@ -141,12 +140,11 @@ def eval_terms() -> dict:
     traps = {d["term"] for d in data if d.get("trap")}
     plan, unclear = rules_gads.judge_terms(rows)
     rules = {v.term: v.negative for v in plan.verdicts}
-    key = os.environ.get("GROQ_API_KEY", "").strip()
     out = {"terms": len(data), "traps": len(traps), "rules": _score(rules, truth, traps)}
-    if not key:
-        out["llm"] = "skipped: GROQ_API_KEY not set"
+    chat = build_chat("groq")
+    if chat is None:
+        out["llm"] = "skipped: no provider key set (GROQ_API_KEY, GEMINI_API_KEY, ...)"
         return out
-    chat = GroqChat(key)
     variants = {"rules_plus_llm_on_unclear": [u.term for u in unclear],
                 "rules_plus_llm_on_all_candidates": [v.term for v in plan.verdicts if v.negative or v.source == "pattern"],
                 "llm_only": list(truth)}

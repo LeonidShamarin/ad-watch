@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-import os
 import sys
 from datetime import date, timedelta
 from pathlib import Path
@@ -18,15 +17,14 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from adwatch import mockapi, pipeline, snapshots  # noqa: E402
-from adwatch.llm import GroqChat  # noqa: E402
+from adwatch.llm import build_chat  # noqa: E402
 
 END = date(2026, 10, 10)
 DAYS = 10
 
 
 async def main() -> None:
-    key = os.environ.get("GROQ_API_KEY", "").strip()
-    llm = GroqChat(key) if key else None
+    llm = build_chat("groq")
     snapshots.RUNS.mkdir(parents=True, exist_ok=True)
     index, total = [], 0.0
     for i in range(DAYS - 1, -1, -1):

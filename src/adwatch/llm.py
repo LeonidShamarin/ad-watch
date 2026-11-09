@@ -74,7 +74,7 @@ PROVIDER_ENDPOINTS: dict[str, tuple[str, str]] = {
     "groq": ("https://api.groq.com/openai/v1", MODEL),
     "gemini": ("https://generativelanguage.googleapis.com/v1beta/openai", "gemini-3.5-flash-lite"),
     "openai": ("https://api.openai.com/v1", "gpt-4o-mini"),
-    "xai": ("https://api.x.ai/v1", "grok-2-latest"),
+    "xai": ("https://api.x.ai/v1", "grok-4.20-0309-non-reasoning"),
 }
 _PRIMARY_ENV = {"groq": "GROQ_API_KEY", "gemini": "GEMINI_API_KEY",
                 "openai": "OPENAI_API_KEY", "xai": "XAI_API_KEY"}

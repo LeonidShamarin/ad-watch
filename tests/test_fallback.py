@@ -75,7 +75,7 @@ def test_openai_compat_chat_shape() -> None:
     assert text == '{"v":2}' and usage["prompt_tokens"] == 5
     assert seen["url"] == "https://api.x.ai/v1/chat/completions"
     assert seen["auth"] == "Bearer xai-key"
-    assert seen["body"]["model"] == "grok-2-latest"
+    assert seen["body"]["model"] == "grok-4.20-0309-non-reasoning"
     assert seen["body"]["response_format"] == {"type": "json_object"}
     assert "reasoning_effort" not in seen["body"]  # Groq-only, must not leak to others
 
